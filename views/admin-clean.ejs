@@ -1,0 +1,680 @@
+Tôi đã xem xét code của bạn và nhận thấy một số vấn đề cần sửa để đảm bảo code hoạt động đúng và tối ưu hơn. Dưới đây là các lỗi và cách khắc phục, giữ nguyên cấu trúc và chức năng hiện có:
+
+### Các lỗi và cách sửa
+
+1. **Thiếu xử lý sự kiện cho các nút chỉnh sửa đội thi**:
+   - Các nút "Sửa" (`edit-team-btn`) không có sự kiện được gắn để mở modal chỉnh sửa. Dữ liệu `data-team-id`, `data-team-name`, `data-team-description` được khai báo nhưng không được sử dụng trong hàm `editTeam`.
+   - **Sửa lỗi**: Thêm sự kiện click cho các nút chỉnh sửa để gọi hàm `editTeam`.
+
+2. **Thiếu nút Export trong giao diện**:
+   - Hàm `exportData` được định nghĩa nhưng không có nút nào trong giao diện để gọi hàm này.
+   - **Sửa lỗi**: Thêm nút Export vào phần "Quản lý đội thi" hoặc "Điều khiển hệ thống".
+
+3. **Chức năng import chưa hoàn thiện**:
+   - Hàm `importData` hiện chỉ hiển thị thông báo rằng chức năng sẽ được bổ sung sau. Điều này không phù hợp với một hệ thống hoàn chỉnh.
+   - **Sửa lỗi**: Thêm logic xử lý file JSON để import dữ liệu đội thi.
+
+4. **Cập nhật thống kê không lấy dữ liệu thực tế**:
+   - Hàm `loadStats` hiện chỉ hiển thị dữ liệu tĩnh (số votes và tỷ lệ đều là 0). Cần gọi API để lấy dữ liệu thực tế từ server.
+   - **Sửa lỗi**: Thêm logic gọi API để lấy số liệu thống kê.
+
+5. **Thiếu kiểm tra và xử lý lỗi trong các hàm gọi API**:
+   - Các hàm `startVoting`, `stopVoting`, `resetVotes` không xử lý đầy đủ các trường hợp lỗi từ server (ví dụ: mã lỗi HTTP cụ thể).
+   - **Sửa lỗi**: Thêm kiểm tra trạng thái response và thông báo lỗi chi tiết hơn.
+
+6. **Thiếu cập nhật số votes trong bảng đội thi**:
+   - Các phần tử `votes-<%= team._id %>` trong bảng đội thi không được cập nhật khi gọi `loadStats`.
+   - **Sửa lỗi**: Cập nhật số votes trong hàm `loadStats`.
+
+7. **Không tối ưu hóa việc đóng modal**:
+   - Việc đóng modal bằng cách click ra ngoài chỉ được xử lý qua sự kiện click trên toàn bộ modal. Điều này có thể gây ra vấn đề nếu có các phần tử con cần xử lý sự kiện riêng.
+   - **Sửa lỗi**: Cải thiện logic đóng modal để chỉ đóng khi click vào nền (backdrop).
+
+8. **Cảnh báo bảo mật với `confirm`**:
+   - Các hàm sử dụng `confirm` (như `resetVotes`, `startVoting`, `stopVoting`, `bulkDeleteTeams`) không cung cấp thông tin chi tiết, có thể gây nhầm lẫn cho người dùng.
+   - **Sửa lỗi**: Tùy chỉnh thông báo để rõ ràng hơn.
+
+### Code đã sửa
+
+Dưới đây là code đã được sửa, giữ nguyên cấu trúc và các chức năng hiện có:
+
+```html
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Hệ thống Bình chọn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-800 via-gray-900 to-slate-900">
+    <div class="min-h-screen py-8 px-4">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-8">
+                <h1 class="text-4xl md:text-5xl font-bold text-white">
+                    🔧 Admin Dashboard
+                </h1>
+                <div class="flex space-x-4">
+                    <a href="/" class="inline-flex items-center bg-white/20 backdrop-blur-lg rounded-full px-6 py-3 text-white hover:bg-white/30 transition-all duration-300">
+                        <i class="fas fa-home mr-2"></i>Trang chủ
+                    </a>
+                    <a href="/result" class="inline-flex items-center bg-blue-500/20 backdrop-blur-lg rounded-full px-6 py-3 text-blue-300 hover:bg-blue-500/30 transition-all duration-300">
+                        <i class="fas fa-chart-bar mr-2"></i>Kết quả
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-blue-500/20 backdrop-blur-lg rounded-2xl p-6 border border-blue-300/30">
+                    <div class="flex items-center">
+                        <i class="fas fa-users text-3xl text-blue-300 mr-4"></i>
+                        <div>
+                            <div class="text-3xl font-bold text-white"><%= teams.length %></div>
+                            <div class="text-blue-200 text-sm">Đội thi</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-green-500/20 backdrop-blur-lg rounded-2xl p-6 border border-green-300/30">
+                    <div class="flex items-center">
+                        <i class="fas fa-vote-yea text-3xl text-green-300 mr-4"></i>
+                        <div>
+                            <div id="totalVotes" class="text-3xl font-bold text-white">-</div>
+                            <div class="text-green-200 text-sm">Tổng votes</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-yellow-500/20 backdrop-blur-lg rounded-2xl p-6 border border-yellow-300/30">
+                    <div class="flex items-center">
+                        <i class="fas fa-clock text-3xl text-yellow-300 mr-4"></i>
+                        <div>
+                            <div class="text-3xl font-bold text-white"><%= voteDuration %></div>
+                            <div class="text-yellow-200 text-sm">Phút/phiên</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl mb-8">
+                <h2 class="text-2xl font-bold text-white mb-6">⚙️ Điều khiển hệ thống</h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <form action="/admin/config" method="POST" class="contents">
+                        <div>
+                            <label for="voteDuration" class="block text-sm font-medium text-gray-300 mb-2">
+                                Thời gian vote (phút):
+                            </label>
+                            <input type="number" 
+                                   class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                   id="voteDuration" 
+                                   name="voteDuration" 
+                                   value="<%= voteDuration %>" 
+                                   min="1" 
+                                   max="60" 
+                                   required>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105">
+                                <i class="fas fa-save mr-2"></i>Lưu
+                            </button>
+                        </div>
+                    </form>
+                    <div class="flex items-end">
+                        <button onclick="startVoting()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105">
+                            <i class="fas fa-play mr-2"></i>Bắt đầu
+                        </button>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="stopVoting()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105">
+                            <i class="fas fa-stop mr-2"></i>Dừng vote
+                        </button>
+                    </div>
+                </div>
+                <div class="grid md:grid-cols-4 gap-6 mt-6">
+                    <button onclick="loadStats()" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105">
+                        <i class="fas fa-sync-alt mr-2"></i>Làm mới
+                    </button>
+                    <button onclick="exportData()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105">
+                        <i class="fas fa-download mr-2"></i>Export
+                    </button>
+                    <button onclick="showImportModal()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105">
+                        <i class="fas fa-upload mr-2"></i>Import
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add Team Section -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl mb-8">
+                <h2 class="text-2xl font-bold text-white mb-6">➕ Thêm đội thi mới</h2>
+                <form action="/admin/teams" method="POST">
+                    <div class="grid md:grid-cols-4 gap-6">
+                        <div>
+                            <label for="teamName" class="block text-sm font-medium text-gray-300 mb-2">Tên đội:</label>
+                            <input type="text" 
+                                   class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                                   id="teamName" 
+                                   name="name" 
+                                   placeholder="Nhập tên đội thi" 
+                                   required>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="teamDescription" class="block text-sm font-medium text-gray-300 mb-2">Mô tả:</label>
+                            <input type="text" 
+                                   class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                                   id="teamDescription" 
+                                   name="description" 
+                                   placeholder="Mô tả về đội thi (tùy chọn)">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105">
+                                <i class="fas fa-plus mr-2"></i>Thêm đội
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Teams Management -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-white">📋 Quản lý đội thi (<%= teams.length %> đội)</h2>
+                    <div class="flex space-x-4">
+                        <button onclick="selectAllTeams()" class="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-4 py-2 rounded-xl transition-all duration-300">
+                            <i class="fas fa-check-square mr-2"></i>Chọn tất cả
+                        </button>
+                        <button onclick="bulkDeleteTeams()" class="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-4 py-2 rounded-xl transition-all duration-300">
+                            <i class="fas fa-trash mr-2"></i>Xóa nhiều
+                        </button>
+                    </div>
+                </div>
+                
+                <% if (teams.length === 0) { %>
+                    <div class="text-center py-12">
+                        <i class="fas fa-users text-6xl text-gray-500 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-400 mb-2">Chưa có đội thi nào</h3>
+                        <p class="text-gray-500">Hãy thêm đội thi đầu tiên bằng form ở trên!</p>
+                    </div>
+                <% } else { %>
+                    <div class="overflow-hidden rounded-xl">
+                        <table class="w-full bg-white">
+                            <thead class="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                                <tr>
+                                    <th class="px-6 py-4 text-left font-bold">
+                                        <input type="checkbox" id="selectAll" class="rounded">
+                                    </th>
+                                    <th class="px-6 py-4 text-left font-bold">#</th>
+                                    <th class="px-6 py-4 text-left font-bold">Tên đội</th>
+                                    <th class="px-6 py-4 text-left font-bold">Mô tả</th>
+                                    <th class="px-6 py-4 text-left font-bold">Ngày tạo</th>
+                                    <th class="px-6 py-4 text-center font-bold">Votes</th>
+                                    <th class="px-6 py-4 text-center font-bold">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% teams.forEach((team, index) => { %>
+                                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200">
+                                        <td class="px-6 py-4">
+                                            <input type="checkbox" class="team-checkbox rounded" value="<%= team._id %>">
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-bold">
+                                                <%= index + 1 %>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="font-semibold text-gray-800"><%= team.name %></div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="text-gray-600"><%= team.description || 'Không có mô tả' %></span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="text-gray-500 text-sm"><%= new Date(team.createdAt).toLocaleDateString('vi-VN') %></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <span id="votes-<%= team._id %>" class="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                                -
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center justify-center space-x-2">
+                                                <button class="edit-team-btn bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm transition-all duration-300"
+                                                        data-team-id="<%= team._id %>" 
+                                                        data-team-name="<%= team.name %>" 
+                                                        data-team-description="<%= team.description || '' %>">
+                                                    <i class="fas fa-edit mr-1"></i>Sửa
+                                                </button>
+                                                <form method="POST" action="/admin/teams/<%= team._id %>/delete" class="inline" 
+                                                      onsubmit="return confirm('Bạn có chắc muốn xóa đội <%= team.name %>? Hành động này không thể hoàn tác!')">
+                                                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm transition-all duration-300">
+                                                        <i class="fas fa-trash mr-1"></i>Xóa
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } %>
+            </div>
+
+            <!-- Statistics Panel -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-white">📊 Thống kê chi tiết</h2>
+                    <button onclick="loadStats()" class="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-4 py-2 rounded-xl transition-all duration-300">
+                        <i class="fas fa-sync-alt mr-2"></i>Làm mới
+                    </button>
+                </div>
+                <div id="statsContainer">
+                    <div class="text-center text-gray-400">
+                        <div class="inline-block animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+                        <p>Đang tải thống kê...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Team Modal -->
+    <div id="editTeamModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold text-white mb-6">✏️ Chỉnh sửa đội thi</h3>
+            <form id="editTeamForm" method="POST">
+                <div class="space-y-4">
+                    <div>
+                        <label for="editTeamName" class="block text-sm font-medium text-gray-300 mb-2">Tên đội:</label>
+                        <input type="text" 
+                               class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                               id="editTeamName" 
+                               name="name" 
+                               required>
+                    </div>
+                    <div>
+                        <label for="editTeamDescription" class="block text-sm font-medium text-gray-300 mb-2">Mô tả:</label>
+                        <input type="text" 
+                               class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                               id="editTeamDescription" 
+                               name="description">
+                    </div>
+                </div>
+                <div class="flex space-x-4 mt-6">
+                    <button type="button" onclick="closeEditModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300">
+                        Hủy
+                    </button>
+                    <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300">
+                        <i class="fas fa-save mr-2"></i>Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold text-white mb-6">📤 Import dữ liệu</h3>
+            <div class="space-y-4">
+                <div>
+                    <label for="importFile" class="block text-sm font-medium text-gray-300 mb-2">Chọn file JSON:</label>
+                    <input type="file" 
+                           class="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+                           id="importFile" 
+                           accept=".json">
+                </div>
+            </div>
+            <div class="flex space-x-4 mt-6">
+                <button type="button" onclick="closeImportModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300">
+                    Hủy
+                </button>
+                <button onclick="importData()" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300">
+                    <i class="fas fa-upload mr-2"></i>Import
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store data for JavaScript use
+        const teamsData = <%- JSON.stringify(teams) %>;
+        const voteDurationValue = <%= voteDuration %>;
+
+        // Edit Team Functions
+        function editTeam(id, name, description) {
+            document.getElementById('editTeamForm').action = `/admin/teams/${id}`;
+            document.getElementById('editTeamName').value = name;
+            document.getElementById('editTeamDescription').value = description || '';
+            document.getElementById('editTeamModal').classList.remove('hidden');
+            document.getElementById('editTeamModal').classList.add('flex');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editTeamModal').classList.add('hidden');
+            document.getElementById('editTeamModal').classList.remove('flex');
+        }
+
+        // Control Functions
+        function resetVotes() {
+            if (confirm('Bạn có chắc muốn xóa TẤT CẢ lượt bình chọn? Hành động này không thể hoàn tác và sẽ ảnh hưởng đến toàn bộ thống kê!')) {
+                fetch('/admin/reset-votes', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('Đã reset tất cả votes thành công!');
+                        loadStats();
+                    } else {
+                        throw new Error(data.message || 'Lỗi khi reset votes');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(`Lỗi khi reset votes: ${error.message}`);
+                });
+            }
+        }
+
+        function startVoting() {
+            if (confirm('Bạn có muốn bắt đầu một phiên bình chọn mới? Các lượt vote trước sẽ được giữ nguyên.')) {
+                fetch('/admin/voting/start', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('Đã bắt đầu phiên bình chọn thành công!');
+                    } else {
+                        throw new Error(data.message || 'Lỗi khi bắt đầu vote');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(`Lỗi khi bắt đầu vote: ${error.message}`);
+                });
+            }
+        }
+
+        function stopVoting() {
+            if (confirm('Bạn có muốn dừng phiên bình chọn hiện tại? Người dùng sẽ không thể vote thêm.')) {
+                fetch('/admin/voting/stop', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('Đã dừng phiên bình chọn thành công!');
+                    } else {
+                        throw new Error(data.message || 'Lỗi khi dừng vote');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(`Lỗi khi dừng vote: ${error.message}`);
+                });
+            }
+        }
+
+        // Export/Import Functions
+        function exportData() {
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                teams: teamsData,
+                voteDuration: voteDurationValue,
+                stats: {}
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `voting_data_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showImportModal() {
+            document.getElementById('importModal').classList.remove('hidden');
+            document.getElementById('importModal').classList.add('flex');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.add('hidden');
+            document.getElementById('importModal').classList.remove('flex');
+            document.getElementById('importFile').value = '';
+        }
+
+        function importData() {
+            const fileInput = document.getElementById('importFile');
+            if (!fileInput.files.length) {
+                alert('Vui lòng chọn một file JSON để import!');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data.teams || !Array.isArray(data.teams)) {
+                        throw new Error('File JSON không hợp lệ! Cần chứa mảng teams.');
+                    }
+
+                    fetch('/admin/import-teams', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ teams: data.teams })
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert('Đã import dữ liệu thành công! Đang tải lại trang...');
+                            window.location.reload();
+                        } else {
+                            throw new Error(data.message || 'Lỗi khi import dữ liệu');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert(`Lỗi khi import dữ liệu: ${error.message}`);
+                    });
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert(`Lỗi khi xử lý file JSON: ${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+            closeImportModal();
+        }
+
+        // Bulk Operations
+        function selectAllTeams() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.team-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        }
+
+        function bulkDeleteTeams() {
+            const selectedTeams = Array.from(document.querySelectorAll('.team-checkbox:checked')).map(cb => cb.value);
+            
+            if (selectedTeams.length === 0) {
+                alert('Vui lòng chọn ít nhất một đội để xóa!');
+                return;
+            }
+
+            if (confirm(`Bạn có chắc muốn xóa ${selectedTeams.length} đội đã chọn? Hành động này không thể hoàn tác!`)) {
+                Promise.all(selectedTeams.map(teamId => 
+                    fetch(`/admin/teams/${teamId}/delete`, { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                ))
+                .then(responses => Promise.all(responses.map(res => res.json())))
+                .then(results => {
+                    if (results.every(r => r.success)) {
+                        alert('Đã xóa các đội thành công! Đang tải lại trang...');
+                        window.location.reload();
+                    } else {
+                        throw new Error('Một số đội không thể xóa');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(`Lỗi khi xóa các đội: ${error.message}`);
+                });
+            }
+        }
+
+        function loadStats() {
+            try {
+                fetch('/admin/stats')
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    const totalVotes = data.totalVotes || 0;
+                    const voterCount = data.voterCount || 0;
+                    const teamStats = data.teamStats || {};
+
+                    // Update total votes
+                    document.getElementById('totalVotes').textContent = totalVotes;
+
+                    // Update votes for each team
+                    teamsData.forEach(team => {
+                        const voteElement = document.getElementById(`votes-${team._id}`);
+                        if (voteElement) {
+                            voteElement.textContent = teamStats[team._id]?.votes || 0;
+                        }
+                    });
+
+                    // Update stats container
+                    document.getElementById('statsContainer').innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div class="bg-blue-500/20 backdrop-blur-lg rounded-2xl p-6 border border-blue-300/30">
+                                <div class="flex items-center">
+                                    <i class="fas fa-vote-yea text-3xl text-blue-300 mr-4"></i>
+                                    <div>
+                                        <div class="text-3xl font-bold text-white">${totalVotes}</div>
+                                        <div class="text-blue-200 text-sm">Tổng số votes</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-green-500/20 backdrop-blur-lg rounded-2xl p-6 border border-green-300/30">
+                                <div class="flex items-center">
+                                    <i class="fas fa-users text-3xl text-green-300 mr-4"></i>
+                                    <div>
+                                        <div class="text-3xl font-bold text-white">${voterCount}</div>
+                                        <div class="text-green-200 text-sm">Người bình chọn</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-purple-500/20 backdrop-blur-lg rounded-2xl p-6 border border-purple-300/30">
+                                <div class="flex items-center">
+                                    <i class="fas fa-trophy text-3xl text-purple-300 mr-4"></i>
+                                    <div>
+                                        <div class="text-3xl font-bold text-white">${teamsData.length}</div>
+                                        <div class="text-purple-200 text-sm">Đội thi</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl overflow-hidden">
+                            <table class="w-full">
+                                <thead class="bg-gradient-to-r from-gray-600 to-gray-700 text-white">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">Đội thi</th>
+                                        <th class="px-4 py-3 text-center">Số votes</th>
+                                        <th class="px-4 py-3 text-center">Tỷ lệ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${teamsData.map(team => `
+                                        <tr class="border-b border-gray-100">
+                                            <td class="px-4 py-3 font-medium text-gray-800">${team.name}</td>
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                                    ${teamStats[team._id]?.votes || 0}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-center text-gray-600">
+                                                ${totalVotes > 0 ? ((teamStats[team._id]?.votes || 0) / totalVotes * 100).toFixed(1) : 0}%
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading stats:', error);
+                    document.getElementById('statsContainer').innerHTML = `
+                        <div class="text-center text-red-400">
+                            <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                            <p>Lỗi khi tải thống kê: ${error.message}. Vui lòng thử lại.</p>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                document.getElementById('statsContainer').innerHTML = `
+                    <div class="text-center text-red-400">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p>Lỗi khi tải thống kê: ${error.message}. Vui lòng thử lại.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize edit buttons
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            document.querySelectorAll('.edit-team-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const id = button.dataset.teamId;
+                    const name = button.dataset.teamName;
+                    const description = button.dataset.teamDescription;
+                    editTeam(id, name, description);
+                });
+            });
+        });
+
+        // Close modals when clicking outside
+        document.getElementById('editTeamModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEditModal();
+            }
+        });
+
+        document.getElementById('importModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImportModal();
+            }
+        });
+
+        // Select all checkbox handler
+        document.getElementById('selectAll').addEventListener('change', selectAllTeams);
+
+        console.log('✅ Admin page loaded successfully!');
+    </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "name": "syw",
+  "version": "1.0.0",
+  "description": "Bình Chọn",
+  "main": "app.js",
+  "scripts": {
+    "start": "node production-server.js",
+    "dev": "node production-server.js",
+    "build": "echo 'Build completed'",
+    "init-db": "node init-db.js",
+    "seed": "node seed-data.js",
+    "start-with-data": "node init-db.js && node production-server.js",
+    "test-connection": "node test-connection.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "voting",
+    "nodejs",
+    "mongodb",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "dotenv": "^17.2.0",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "mongodb": "^6.17.0",
+    "mongodb-memory-server-core": "^10.1.4",
+    "mongoose": "^8.16.3",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  }
+}
