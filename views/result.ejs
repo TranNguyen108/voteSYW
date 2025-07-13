@@ -4,7 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kết quả bình chọn</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+           // Update statistics cards
+        function updateStats(data) {
+            console.log('📊 Updating stats with data:', data);
+            
+            if (!data || data.length === 0) {
+                console.log('⚠️ No data for stats');
+                document.getElementById('voteStats').innerHTML = `
+                    <div class="col-span-full bg-yellow-500/20 backdrop-blur-lg rounded-2xl p-6 border border-yellow-300/30 text-center">
+                        <i class="fas fa-info-circle text-3xl text-yellow-300 mb-4"></i>
+                        <div class="text-white font-bold">Chưa có dữ liệu bình chọn</div>
+                        <div class="text-yellow-200 text-sm">Hãy bắt đầu bình chọn để xem kết quả</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const totalVotes = data.reduce((sum, item) => sum + item.count, 0);
+            const maxVotes = Math.max(...data.map(item => item.count));
+            const leader = data.find(item => item.count === maxVotes);
+            
+            console.log('📈 Stats calculated:', { totalVotes, maxVotes, leader: leader?.teamName });
+            
+            document.getElementById('voteStats').innerHTML = `t src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -86,9 +108,18 @@
 
         // Initialize chart with modern styling
         function initChart(data) {
+            console.log('🎨 Initializing chart with data:', data);
+            
+            if (!data || data.length === 0) {
+                console.log('⚠️ No data to display in chart');
+                document.getElementById('voteChart').style.display = 'none';
+                return;
+            }
+            
             const ctx = document.getElementById('voteChart').getContext('2d');
             
             if (chart) {
+                console.log('🔄 Destroying existing chart');
                 chart.destroy();
             }
 
@@ -228,7 +259,22 @@
 
         // Update detailed table
         function updateDetailedTable(data) {
+            console.log('📋 Updating detailed table with data:', data);
+            
+            if (!data || data.length === 0) {
+                console.log('⚠️ No data for detailed table');
+                document.getElementById('detailedTable').innerHTML = `
+                    <div class="bg-white rounded-xl p-8 text-center">
+                        <i class="fas fa-table text-4xl text-gray-400 mb-4"></i>
+                        <div class="text-gray-600 font-bold">Chưa có dữ liệu</div>
+                        <div class="text-gray-500 text-sm">Bảng chi tiết sẽ hiển thị khi có bình chọn</div>
+                    </div>
+                `;
+                return;
+            }
+            
             const totalVotes = data.reduce((sum, item) => sum + item.count, 0);
+            console.log('📊 Total votes for table:', totalVotes);
             
             document.getElementById('detailedTable').innerHTML = `
                 <table class="w-full bg-white rounded-xl overflow-hidden">
@@ -282,6 +328,7 @@
             try {
                 console.log('🔄 Fetching vote data...');
                 const response = await fetch('/result/api/data');
+                console.log('📡 API Response status:', response.status);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -296,10 +343,13 @@
                 
                 // Sort by vote count (descending)
                 data.sort((a, b) => b.count - a.count);
+                console.log('📈 Sorted data:', data);
                 
                 initChart(data);
                 updateStats(data);
                 updateDetailedTable(data);
+                
+                console.log('✅ Data update completed successfully');
                 
                 // Update timestamp
                 document.getElementById('lastUpdate').textContent = 
