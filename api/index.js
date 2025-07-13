@@ -17,6 +17,7 @@ const app = express();
 
 // MongoDB connection state
 let isConnected = false;
+let isConfigInitialized = false;
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
@@ -56,22 +57,15 @@ async function connectToDatabase() {
 
         console.log('🔄 Connecting to MongoDB Atlas...');
         await mongoose.connect(mongoUri, {
-            serverSelectionTimeoutMS: 8000,
-            connectTimeoutMS: 8000,
-            socketTimeoutMS: 8000,
+            serverSelectionTimeoutMS: 15000,
+            connectTimeoutMS: 15000,
+            socketTimeoutMS: 15000,
             maxPoolSize: 5,
             bufferCommands: false,
         });
         
         isConnected = true;
         console.log('✅ MongoDB Atlas connected successfully!');
-
-        // Initialize default config
-        const config = await Config.findOne({ key: 'voteDuration' });
-        if (!config) {
-            await Config.create({ key: 'voteDuration', value: 5 });
-            console.log('⚙️ Default config created');
-        }
 
     } catch (error) {
         console.error('❌ Database connection failed:', error.message);
@@ -80,10 +74,32 @@ async function connectToDatabase() {
     }
 }
 
+// Initialize default configuration
+async function initializeConfig() {
+    if (isConfigInitialized) {
+        return;
+    }
+    
+    try {
+        const config = await Config.findOne({ key: 'voteDuration' });
+        if (!config) {
+            await Config.create({ key: 'voteDuration', value: 5 });
+            console.log('⚙️ Default config created');
+        }
+        isConfigInitialized = true;
+    } catch (error) {
+        console.error('⚠️ Config initialization warning:', error.message);
+    }
+}
+
 // Database middleware
 app.use(async (req, res, next) => {
     try {
         await connectToDatabase();
+        
+        // Initialize config after successful connection
+        await initializeConfig();
+        
         next();
     } catch (error) {
         console.error('❌ Database middleware error:', error.message);
