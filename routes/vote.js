@@ -3,6 +3,7 @@ const router = express.Router();
 const QRCode = require('qrcode');
 const Team = require('../models/team');
 const Config = require('../models/config');
+const { requireAuth } = require('../middleware/auth');
 
 // Simple rate limiting
 const voteSessions = new Map();
@@ -28,8 +29,8 @@ function checkVoteSession(teamId, ip) {
     return true;
 }
 
-// Get vote page (list of teams)
-router.get('/', async (req, res) => {
+// Get vote page (list of teams) - PROTECTED
+router.get('/', requireAuth('vote'), async (req, res) => {
     try {
         console.log('🔍 Vote page - Loading team list');
         const teams = await Team.find().sort({ createdAt: -1 });
@@ -40,8 +41,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get vote page for specific team
-router.get('/:teamId', async (req, res) => {
+// Get vote page for specific team - PROTECTED
+router.get('/:teamId', requireAuth('vote'), async (req, res) => {
     try {
         const team = await Team.findById(req.params.teamId);
         if (!team) {

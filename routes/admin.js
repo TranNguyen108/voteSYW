@@ -3,8 +3,12 @@ const router = express.Router();
 const Team = require('../models/team');
 const Vote = require('../models/vote');
 const Config = require('../models/config');
+const { requireAuth } = require('../middleware/auth');
 
-// Get admin page
+// Apply authentication middleware to all admin routes
+router.use(requireAuth('admin'));
+
+// Get admin page - PROTECTED
 router.get('/', async (req, res) => {
     try {
         console.log('🔍 Admin route called');

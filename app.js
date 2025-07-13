@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const session = require('express-session');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
@@ -9,6 +10,17 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
+
+// Session configuration
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'syw-vote-secret-key-2024',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // Set to true in production with HTTPS
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -44,12 +56,14 @@ mongoose.connect(MONGODB_URI, {
 });
 
 // Routes
+const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const voteRoutes = require('./routes/vote');
 const resultRoutes = require('./routes/result');
 const submitRoutes = require('./routes/submit');
 const dataRoutes = require('./routes/data');
 
+app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/vote', voteRoutes);
 app.use('/result', resultRoutes);
