@@ -7,11 +7,31 @@ const Config = require('../models/config');
 // Simple rate limiting
 const voteAttempts = new Map();
 
-// Session tracking for preventing reload spam
+// Session tracking for preventing reload spam  
 const usedSessions = new Set();
 
 // Clear old sessions on startup to prevent false positives
 console.log('🔄 Initializing submit route - clearing old sessions');
+
+// Function to clean expired sessions based on team voting times
+async function cleanExpiredSessions() {
+    try {
+        const teams = await Team.find({ votingActive: false });
+        const expiredCount = usedSessions.size;
+        
+        // For simplicity, clear all sessions when server restarts
+        // In production, you might want more sophisticated cleanup
+        if (teams.length > 0) {
+            usedSessions.clear();
+            console.log(`🧹 Cleaned ${expiredCount} expired sessions`);
+        }
+    } catch (error) {
+        console.log('⚠️ Session cleanup warning:', error.message);
+    }
+}
+
+// Run cleanup on startup
+cleanExpiredSessions();
 
 // Generate unique session ID
 function generateSessionId() {

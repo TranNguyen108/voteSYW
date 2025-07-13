@@ -80,7 +80,7 @@
                     <!-- Super Large QR Code -->
                     <div class="flex justify-center mb-6">
                         <div class="bg-white p-8 rounded-3xl shadow-2xl animate-qr-pulse cursor-pointer" onclick="handleQRClick()">
-                            <img src="<%= qrCode %>" alt="QR Code" class="w-80 h-80 md:w-96 md:h-96 pointer-events-none">
+                            <img id="qrCodeImg" src="<%= qrCode %>" alt="QR Code" class="w-80 h-80 md:w-96 md:h-96 pointer-events-none">
                         </div>
                     </div>
                     
@@ -194,7 +194,28 @@
 
         // Generate unique session ID
         function generateSessionId() {
-            return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            return Date.now() + '_' + Math.random().toString(36).substr(2, 15) + '_<%= team._id %>';
+        }
+
+        // Refresh QR code with new session
+        async function refreshQRCode() {
+            try {
+                const response = await fetch('/vote/api/refresh-qr/<%= team._id %>');
+                const data = await response.json();
+                
+                if (data.expired) {
+                    showVotingEnded();
+                    return;
+                }
+                
+                if (data.qrCode) {
+                    const qrImg = document.getElementById('qrCodeImg');
+                    qrImg.src = data.qrCode;
+                    console.log('🔄 QR code refreshed with new session:', data.sessionId);
+                }
+            } catch (error) {
+                console.error('Failed to refresh QR code:', error);
+            }
         }
 
         // Handle QR code click - create new session and navigate
@@ -219,12 +240,22 @@
             if (typeof io !== 'undefined') {
                 const socket = io();
                 
-                socket.on('voteUpdate', () => {
-                    console.log('Vote updated in real-time');
-                    // You can add visual feedback here
+                socket.on('voteUpdate', (data) => {
+                    console.log('Vote updated in real-time for team:', data.teamName);
+                    
+                    // If this is our team, refresh QR code for next user
+                    if (data.teamId === '<%= team._id %>') {
+                        console.log('🔄 Our team received a vote, refreshing QR code...');
+                        setTimeout(() => {
+                            refreshQRCode();
+                        }, 1000); // Wait 1 second then refresh
+                    }
                 });
             }
         }
+
+        // Auto-refresh QR code every 30 seconds to prevent stale sessions
+        setInterval(refreshQRCode, 30000);
     </script>
 </body>
 </html>
