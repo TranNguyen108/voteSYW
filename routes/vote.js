@@ -78,8 +78,11 @@ router.get('/:teamId', async (req, res) => {
         }
 
         // Generate QR code for submit URL with session tracking
-        const sessionId = Math.random().toString(36).substr(2, 15) + Date.now().toString(36);
+        const sessionId = `${Date.now()}_${Math.random().toString(36).substr(2, 15)}_${req.params.teamId}`;
         const submitUrl = `${req.protocol}://${req.get('host')}/submit/${req.params.teamId}?session=${sessionId}`;
+        
+        console.log(`🔍 Generated session ID for team ${team.name}: ${sessionId}`);
+        
         const qrCodeDataURL = await QRCode.toDataURL(submitUrl, {
             width: 512,
             margin: 2,

@@ -10,9 +10,12 @@ const voteAttempts = new Map();
 // Session tracking for preventing reload spam
 const usedSessions = new Set();
 
+// Clear old sessions on startup to prevent false positives
+console.log('🔄 Initializing submit route - clearing old sessions');
+
 // Generate unique session ID
 function generateSessionId() {
-    return Math.random().toString(36).substr(2, 15) + Date.now().toString(36);
+    return `${Date.now()}_${Math.random().toString(36).substr(2, 15)}`;
 }
 
 function checkRateLimit(ip) {
@@ -61,6 +64,13 @@ router.get('/:teamId', async (req, res) => {
         
         console.log('🔍 Session ID:', sessionId);
         console.log('🔍 Used sessions count:', usedSessions.size);
+        console.log('🔍 Session already used?', usedSessions.has(sessionId));
+        
+        // Debug: Show some used sessions for comparison
+        if (usedSessions.size > 0) {
+            const usedArray = Array.from(usedSessions).slice(0, 3);
+            console.log('🔍 Sample used sessions:', usedArray);
+        }
         
         // Check if this team's voting session is active and not expired
         if (!team.votingActive || !team.votingEndTime) {
