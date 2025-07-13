@@ -83,14 +83,11 @@ async function connectToDatabase() {
         console.log('🔄 Connecting to MongoDB Atlas...');
         // Connect to MongoDB Atlas with proper timeouts
         await mongoose.connect(mongoUri, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 10000, // 10 seconds
-            connectTimeoutMS: 10000,
-            socketTimeoutMS: 10000,
+            serverSelectionTimeoutMS: 15000,
+            connectTimeoutMS: 15000,
+            socketTimeoutMS: 15000,
             maxPoolSize: 10,
-            bufferMaxEntries: 0, // Disable mongoose buffering
-            bufferCommands: false, // Disable mongoose buffering
+            bufferCommands: false,
         });
         
         isConnected = true;
