@@ -93,16 +93,18 @@ router.get('/:teamId', async (req, res) => {
                 team: team,
                 alreadyVoted: true,
                 noSession: true,
+                isReload: false,
                 votingEndTime: team.votingEndTime
             });
         }
 
         if (usedSessions.has(sessionId)) {
-            console.log('⚠️ Session already used - showing reload message');
+            console.log('⚠️ Session already used - this is a reload/refresh, showing reload message');
             return res.render('submit', { 
                 team: team,
                 alreadyVoted: true,
                 noSession: false,
+                isReload: true,
                 votingEndTime: team.votingEndTime
             });
         }
@@ -165,6 +167,8 @@ router.get('/:teamId', async (req, res) => {
             team: team,
             alreadyVoted: false,
             noSession: false,
+            isReload: false,
+            voteSuccess: true,
             voteDuration: config.value * 60 * 1000, // Convert minutes to milliseconds for JavaScript
             votingEndTime: team.votingEndTime // Use team-specific end time
         });

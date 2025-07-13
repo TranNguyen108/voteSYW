@@ -46,8 +46,14 @@
             <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl text-center">
                 <!-- Success Icon -->
                 <div class="mb-8">
-                    <% if (typeof alreadyVoted !== 'undefined' && alreadyVoted) { %>
-                        <i class="fas fa-info-circle text-8xl text-yellow-300 animate-success-bounce"></i>
+                    <% if (typeof voteSuccess !== 'undefined' && voteSuccess) { %>
+                        <i class="fas fa-check-circle text-8xl text-green-300 animate-success-bounce"></i>
+                    <% } else if (typeof alreadyVoted !== 'undefined' && alreadyVoted) { %>
+                        <% if (typeof isReload !== 'undefined' && isReload) { %>
+                            <i class="fas fa-exclamation-triangle text-8xl text-orange-300 animate-success-bounce"></i>
+                        <% } else { %>
+                            <i class="fas fa-info-circle text-8xl text-yellow-300 animate-success-bounce"></i>
+                        <% } %>
                     <% } else { %>
                         <i class="fas fa-check-circle text-8xl text-white animate-success-bounce"></i>
                     <% } %>
@@ -55,15 +61,43 @@
                 
                 <!-- Thank You Message -->
                 <div class="mb-8">
-                    <% if (typeof alreadyVoted !== 'undefined' && alreadyVoted) { %>
+                    <% if (typeof voteSuccess !== 'undefined' && voteSuccess) { %>
+                        <!-- Successful vote from QR scan -->
+                        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                            🎉 Cảm ơn bạn!
+                        </h1>
+                        <h2 class="text-2xl font-bold text-green-100 mb-6">
+                            Đã vote cho đội <%= team.name %>
+                        </h2>
+                        <div class="bg-green-500/20 backdrop-blur-lg rounded-2xl p-4 mb-4">
+                            <p class="text-lg text-green-100">
+                                ✅ Hệ thống đã ghi nhận <strong>1 lượt vote</strong> của bạn
+                            </p>
+                        </div>
+                    <% } else if (typeof alreadyVoted !== 'undefined' && alreadyVoted) { %>
                         <% if (typeof noSession !== 'undefined' && noSession) { %>
+                            <!-- Direct access without QR -->
                             <h1 class="text-4xl md:text-5xl font-bold text-yellow-300 mb-4">
                                 📱 Hãy quét QR để vote
                             </h1>
                             <h2 class="text-2xl font-bold text-yellow-100 mb-6">
                                 Vui lòng quét mã QR để bình chọn
                             </h2>
+                        <% } else if (typeof isReload !== 'undefined' && isReload) { %>
+                            <!-- Reload/Refresh spam -->
+                            <h1 class="text-4xl md:text-5xl font-bold text-orange-300 mb-4">
+                                🔄 Bạn đã vote rồi!
+                            </h1>
+                            <h2 class="text-2xl font-bold text-orange-100 mb-6">
+                                Vui lòng quét lại QR để vote tiếp
+                            </h2>
+                            <div class="bg-orange-500/20 backdrop-blur-lg rounded-2xl p-4 mb-4">
+                                <p class="text-lg text-orange-100">
+                                    ⚠️ Không thể vote lại từ cùng một session
+                                </p>
+                            </div>
                         <% } else { %>
+                            <!-- Generic already voted -->
                             <h1 class="text-4xl md:text-5xl font-bold text-yellow-300 mb-4">
                                 🔄 Đã vote rồi!
                             </h1>
@@ -72,6 +106,7 @@
                             </h2>
                         <% } %>
                     <% } else { %>
+                        <!-- Fallback success message -->
                         <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">
                             🎉 Cảm ơn bạn!
                         </h1>
@@ -82,7 +117,11 @@
                     
                     <!-- Team Info -->
                     <div class="bg-white/20 backdrop-blur-lg rounded-2xl p-6 mb-6">
-                        <% if (typeof alreadyVoted !== 'undefined' && alreadyVoted) { %>
+                        <% if (typeof voteSuccess !== 'undefined' && voteSuccess) { %>
+                            <p class="text-lg text-white mb-2">
+                                Bạn đã bình chọn cho đội:
+                            </p>
+                        <% } else if (typeof alreadyVoted !== 'undefined' && alreadyVoted) { %>
                             <p class="text-lg text-white mb-2">
                                 Đội bạn muốn bình chọn:
                             </p>
@@ -96,15 +135,25 @@
                         </h3>
                     </div>
                     
-                    <% if (typeof alreadyVoted !== 'undefined' && alreadyVoted) { %>
+                    <% if (typeof voteSuccess !== 'undefined' && voteSuccess) { %>
+                        <p class="text-green-100 text-lg">
+                            Lượt bình chọn của bạn đã được ghi nhận vào hệ thống.
+                        </p>
+                    <% } else if (typeof alreadyVoted !== 'undefined' && alreadyVoted) { %>
                         <div class="mb-6">
                             <button onclick="goBackToVote()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-bold transition-all duration-300 transform hover:scale-105">
                                 <i class="fas fa-qrcode mr-2"></i>Quét QR để vote thêm
                             </button>
                         </div>
-                        <p class="text-yellow-100 text-lg">
-                            Vui lòng quét mã QR từ trang bình chọn để tạo vote mới.
-                        </p>
+                        <% if (typeof isReload !== 'undefined' && isReload) { %>
+                            <p class="text-orange-100 text-lg">
+                                Để vote tiếp, vui lòng quét QR code mới từ trang bình chọn.
+                            </p>
+                        <% } else { %>
+                            <p class="text-yellow-100 text-lg">
+                                Vui lòng quét mã QR từ trang bình chọn để tạo vote mới.
+                            </p>
+                        <% } %>
                     <% } else { %>
                         <p class="text-green-100 text-lg">
                             Lượt bình chọn của bạn đã được ghi nhận vào hệ thống.
