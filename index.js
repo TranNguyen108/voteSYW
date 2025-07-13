@@ -58,27 +58,49 @@ async function connectDB() {
     try {
         const mongoUri = process.env.MONGODB_URI;
         
-        if (!mongoUri || mongoUri.includes('<password>')) {
-            throw new Error('MongoDB Atlas URI not configured properly');
+        console.log('🔍 Checking MongoDB connection...');
+        console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
+        console.log('🔍 MongoDB URI exists:', !!mongoUri);
+        console.log('🔍 MongoDB URI length:', mongoUri ? mongoUri.length : 0);
+        
+        if (!mongoUri) {
+            throw new Error('❌ MONGODB_URI environment variable not set');
+        }
+        
+        if (mongoUri.includes('<password>')) {
+            throw new Error('❌ MongoDB Atlas URI contains placeholder <password>');
+        }
+        
+        if (!mongoUri.startsWith('mongodb')) {
+            throw new Error('❌ Invalid MongoDB URI format');
         }
 
+        console.log('🔄 Attempting MongoDB connection...');
         await mongoose.connect(mongoUri, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 10000, // 10 second timeout
+            connectTimeoutMS: 10000,
         });
         
         isConnected = true;
         console.log('✅ Kết nối MongoDB Atlas thành công!');
 
-        // Initialize default config
+        // Test database operations
         const config = await Config.findOne({ key: 'voteDuration' });
         if (!config) {
             await Config.create({ key: 'voteDuration', value: 5 });
             console.log('⚙️ Đã tạo cấu hình mặc định');
         }
+        
+        console.log('✅ Database operations working!');
 
     } catch (error) {
-        console.error('❌ Lỗi kết nối MongoDB:', error);
+        console.error('❌ MongoDB connection failed:');
+        console.error('❌ Error name:', error.name);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Full error:', error);
+        isConnected = false;
         throw error;
     }
 }
@@ -89,8 +111,12 @@ app.use(async (req, res, next) => {
         await connectDB();
         next();
     } catch (error) {
+        console.error('❌ Database middleware error:', error.message);
         res.status(500).render('error', {
-            error: { status: 500, message: 'Lỗi kết nối database' }
+            error: { 
+                status: 500, 
+                message: `Lỗi kết nối database: ${error.message}` 
+            }
         });
     }
 });

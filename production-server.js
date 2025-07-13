@@ -22,6 +22,9 @@ const server = http.createServer(app);
 const io = socketIo(server);
 const PORT = process.env.PORT || 3000;
 
+// MongoDB connection state for Vercel
+let isConnected = false;
+
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -40,19 +43,57 @@ app.use((req, res, next) => {
     next();
 });
 
-async function startServer() {
+// Database connection middleware for Vercel
+app.use(async (req, res, next) => {
     try {
-        console.log('🚀 Starting MongoDB Atlas Voting System...');
-        
-        // Use MongoDB Atlas
+        await connectToDatabase();
+        next();
+    } catch (error) {
+        console.error('❌ Database middleware error:', error);
+        res.status(500).render('error', {
+            error: { 
+                status: 500, 
+                message: `Lỗi kết nối database: ${error.message}` 
+            }
+        });
+    }
+});
+
+async function connectToDatabase() {
+    if (isConnected) {
+        console.log('✅ Using existing MongoDB connection');
+        return;
+    }
+
+    try {
         const mongoUri = process.env.MONGODB_URI;
         
-        if (!mongoUri || mongoUri.includes('<password>')) {
-            throw new Error('MongoDB Atlas URI not configured properly');
+        console.log('🔍 Checking environment...');
+        console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
+        console.log('🔍 MongoDB URI exists:', !!mongoUri);
+        
+        if (!mongoUri) {
+            throw new Error('❌ MONGODB_URI environment variable not found');
+        }
+        
+        if (mongoUri.includes('<password>')) {
+            throw new Error('❌ MongoDB Atlas URI contains placeholder <password>');
         }
 
-        // Connect to MongoDB Atlas
-        await mongoose.connect(mongoUri);
+        console.log('🔄 Connecting to MongoDB Atlas...');
+        // Connect to MongoDB Atlas with proper timeouts
+        await mongoose.connect(mongoUri, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 10000, // 10 seconds
+            connectTimeoutMS: 10000,
+            socketTimeoutMS: 10000,
+            maxPoolSize: 10,
+            bufferMaxEntries: 0, // Disable mongoose buffering
+            bufferCommands: false, // Disable mongoose buffering
+        });
+        
+        isConnected = true;
         console.log('✅ Kết nối MongoDB Atlas thành công!');
 
         // Initialize default config
@@ -76,10 +117,29 @@ async function startServer() {
             console.log(`👥 Đã tạo ${sampleTeams.length} đội thi mẫu`);
         }
 
+    } catch (error) {
+        console.error('❌ Database connection failed:', error);
+        isConnected = false;
+        throw error;
+    }
+}
+
+async function startServer() {
+    try {
+        console.log('🚀 Starting MongoDB Atlas Voting System...');
+        
+        // Connect to database
+        await connectToDatabase();
+
         // Routes
         app.get('/', async (req, res) => {
-            const teamCount = await Team.countDocuments();
-            res.render('index', { teamCount });
+            try {
+                const teamCount = await Team.countDocuments();
+                res.render('index', { teamCount });
+            } catch (error) {
+                console.error('❌ Error loading homepage:', error);
+                res.render('index', { teamCount: 0 });
+            }
         });
 
         // Debug middleware
@@ -101,9 +161,9 @@ async function startServer() {
 
         // Error handling
         app.use((err, req, res, next) => {
-            console.error('Error:', err);
+            console.error('❌ Application error:', err);
             res.status(500).render('error', {
-                error: { status: 500, message: 'Lỗi hệ thống' }
+                error: { status: 500, message: `Lỗi hệ thống: ${err.message}` }
             });
         });
 
@@ -123,7 +183,13 @@ async function startServer() {
             });
         });
 
-        // Start server
+        // For Vercel, export the app instead of starting server
+        if (process.env.NODE_ENV === 'production') {
+            console.log('🚀 Production mode: Exporting app for Vercel');
+            return app; // Return app for Vercel
+        }
+
+        // Start server for local development
         server.listen(PORT, () => {
             console.log(`🎉 Hệ thống bình chọn đang chạy tại http://localhost:${PORT}`);
             console.log(`📊 Admin panel: http://localhost:${PORT}/admin`);
@@ -139,8 +205,21 @@ async function startServer() {
 
     } catch (error) {
         console.error('❌ Lỗi khởi động server:', error);
-        process.exit(1);
+        if (process.env.NODE_ENV !== 'production') {
+            process.exit(1);
+        }
+        throw error;
     }
 }
 
-startServer();
+// Initialize the server
+startServer().then((app) => {
+    if (process.env.NODE_ENV === 'production') {
+        module.exports = app;
+    }
+}).catch((error) => {
+    console.error('❌ Failed to initialize server:', error);
+    if (process.env.NODE_ENV === 'production') {
+        throw error;
+    }
+});
