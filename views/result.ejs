@@ -4,29 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kết quả bình chọn</title>
-           // Update statistics cards
-        function updateStats(data) {
-            console.log('📊 Updating stats with data:', data);
-            
-            if (!data || data.length === 0) {
-                console.log('⚠️ No data for stats');
-                document.getElementById('voteStats').innerHTML = `
-                    <div class="col-span-full bg-yellow-500/20 backdrop-blur-lg rounded-2xl p-6 border border-yellow-300/30 text-center">
-                        <i class="fas fa-info-circle text-3xl text-yellow-300 mb-4"></i>
-                        <div class="text-white font-bold">Chưa có dữ liệu bình chọn</div>
-                        <div class="text-yellow-200 text-sm">Hãy bắt đầu bình chọn để xem kết quả</div>
-                    </div>
-                `;
-                return;
-            }
-            
-            const totalVotes = data.reduce((sum, item) => sum + item.count, 0);
-            const maxVotes = Math.max(...data.map(item => item.count));
-            const leader = data.find(item => item.count === maxVotes);
-            
-            console.log('📈 Stats calculated:', { totalVotes, maxVotes, leader: leader?.teamName });
-            
-            document.getElementById('voteStats').innerHTML = `t src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -210,9 +188,25 @@
 
         // Update statistics cards
         function updateStats(data) {
+            console.log('📊 Updating stats with data:', data);
+            
+            if (!data || data.length === 0) {
+                console.log('⚠️ No data for stats');
+                document.getElementById('voteStats').innerHTML = `
+                    <div class="col-span-full bg-yellow-500/20 backdrop-blur-lg rounded-2xl p-6 border border-yellow-300/30 text-center">
+                        <i class="fas fa-info-circle text-3xl text-yellow-300 mb-4"></i>
+                        <div class="text-white font-bold">Chưa có dữ liệu bình chọn</div>
+                        <div class="text-yellow-200 text-sm">Hãy bắt đầu bình chọn để xem kết quả</div>
+                    </div>
+                `;
+                return;
+            }
+            
             const totalVotes = data.reduce((sum, item) => sum + item.count, 0);
             const maxVotes = Math.max(...data.map(item => item.count));
             const leader = data.find(item => item.count === maxVotes);
+            
+            console.log('📈 Stats calculated:', { totalVotes, maxVotes, leader: leader?.teamName });
             
             document.getElementById('voteStats').innerHTML = `
                 <div class="bg-blue-500/20 backdrop-blur-lg rounded-2xl p-6 border border-blue-300/30">
