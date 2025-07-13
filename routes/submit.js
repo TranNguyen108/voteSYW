@@ -108,14 +108,12 @@ router.get('/:teamId', async (req, res) => {
 
         // Check if session already used (reload detection)
         if (!sessionId) {
-            console.log('⚠️ No session ID - likely direct access, showing message to scan QR');
-            return res.render('submit', { 
-                team: team,
-                alreadyVoted: true,
-                noSession: true,
-                isReload: false,
-                votingEndTime: team.votingEndTime
-            });
+            // No session - this is a fresh QR scan, generate new session and redirect
+            const newSessionId = `${Date.now()}_${Math.random().toString(36).substr(2, 15)}_${req.params.teamId}`;
+            const redirectUrl = `/submit/${req.params.teamId}?session=${newSessionId}`;
+            
+            console.log(`🔄 No session ID - generating new session ${newSessionId} and redirecting`);
+            return res.redirect(redirectUrl);
         }
 
         if (usedSessions.has(sessionId)) {
