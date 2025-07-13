@@ -1,9 +1,11 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const session = require('express-session');
 const path = require('path');
 
 // Import routes
+const authRoutes = require('../routes/auth');
 const adminRoutes = require('../routes/admin');
 const voteRoutes = require('../routes/vote');
 const resultRoutes = require('../routes/result');
@@ -26,6 +28,17 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 app.set('trust proxy', true);
+
+// Session configuration
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'syw-vote-secret-key-2024',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // Set to true in production with HTTPS
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
 
 // Request logging
 app.use((req, res, next) => {
@@ -137,6 +150,7 @@ app.use('/admin', (req, res, next) => {
 });
 
 // Mount routes
+app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/vote', voteRoutes);
 app.use('/result', resultRoutes);
